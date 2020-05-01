@@ -1,0 +1,1 @@
+protoc -I GRCP/ --go_out=GRCP/ GRCP/protocol_buffer/person.proto

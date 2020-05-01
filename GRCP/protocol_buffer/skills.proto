@@ -1,0 +1,7 @@
+syntax = "proto3";
+package skill_package;
+
+message Skills {
+    string Name = 1;
+    int32 exp = 2;
+}

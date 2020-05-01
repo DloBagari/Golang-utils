@@ -1,0 +1,23 @@
+syntax = "proto3";
+option go_package = "protocol_buffer;person";
+message Person {
+    int32 age = 1;
+    string name = 2;
+    bool developer = 3;
+    repeated Address my_address = 4;
+    enum EyeColour {
+        NOT_DEFINED = 0;
+        BLACK = 1;
+        GREEN = 2;
+        BLUE = 3;
+    }
+
+    // default value is EyeColour tag 0
+    EyeColour eye_colour = 6;
+
+}
+
+message Address {
+    string street = 1;
+    int32 house_number = 2;
+}
