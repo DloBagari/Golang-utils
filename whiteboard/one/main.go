@@ -1,59 +1,54 @@
 package main
 
 import (
-	crand "crypto/rand"
-	"fmt"
-	"math/big"
-	"math/rand"
-	"strings"
+	"crypto/tls"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
 )
 
-var (
-	lowerChars   = "abcdedfghijklmnopqrst"
-	upperChars   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	specialChars = "!@#$%&*"
-	numbers      = "0123456789"
-	allChars     = lowerChars + upperChars + specialChars + numbers
-)
-
-func GeneratePassword(passwordLength, minSpecialChar, minNum, minUpperCase int) string {
-	var password strings.Builder
-	for i := 0; i < minSpecialChar; i++ {
-		random, _ := crand.Int(crand.Reader, big.NewInt(int64(len(specialChars))))
-		password.WriteString(string(specialChars[random.Int64()]))
+func HttpClient() (client *http.Client) {
+	uckey := "/home/dlo/fuid_certs/client.fuid.key"
+	ucert := "/home/dlo/fuid_certs/client.fuid.crt"
+	x509cert, err := tls.LoadX509KeyPair(ucert, uckey)
+	if err != nil {
+		panic(err.Error())
 	}
-	for i := 0; i < minNum; i++ {
-		random, _ := crand.Int(crand.Reader, big.NewInt(int64(len(numbers))))
-		password.WriteString(string(numbers[random.Int64()]))
+	certs := []tls.Certificate{x509cert}
+	if len(certs) == 0 {
+		client = &http.Client{}
+		return
 	}
-	for i := 0; i < minUpperCase; i++ {
-		random, _ := crand.Int(crand.Reader, big.NewInt(int64(len(upperChars))))
-		password.WriteString(string(upperChars[random.Int64()]))
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{Certificates: certs,
+			InsecureSkipVerify: true},
 	}
-	numLowerCase := passwordLength - minSpecialChar - minNum - minUpperCase
-	for i := 0; i < numLowerCase; i++ {
-		random, _ := crand.Int(crand.Reader, big.NewInt(int64(len(allChars))))
-		password.WriteString(string(allChars[random.Int64()]))
-	}
-	inRune := []rune(password.String())
-	rand.Shuffle(len(inRune), func(i, j int) {
-		inRune[i], inRune[j] = inRune[j], inRune[i]
-	})
-	return string(inRune)
+	client = &http.Client{Transport: tr}
+	return
 }
+
 func main() {
-	minSpecialChar := 1
-	minNum := 1
-	minUpperCase := 1
-	passwordLength := 20
-	m := make(map[string]int)
-	for i := 0; i < 100000; i++ {
-		password := GeneratePassword(passwordLength, minSpecialChar, minNum, minUpperCase)
-		m[password]++
+	rurl := "https://51.91.237.250:5000/api/uid/v1.0/users?domain=example.com"
+	client := HttpClient()
+	req, err := http.NewRequest("GET", rurl, nil)
+	if err != nil {
+		log.Println("Unable to make GET request", err)
+		os.Exit(1)
 	}
-	for k, v := range m {
-		if v > 1 {
-			fmt.Println(k)
-		}
+	//username := "dlo"
+	//password := "Forcepoint1"
+	//login := fmt.Sprintf("%s:%s", username, password)
+	//basic := base64.StdEncoding.EncodeToString([]byte(login))
+	//basic = fmt.Sprintf("Basic %s", basic)
+	//req.Header.Set("Authorization", basic)
+	//req.Header.Add("Accept", "*/*")
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
+	defer resp.Body.Close()
+	data, err := ioutil.ReadAll(resp.Body)
+	log.Println(string(data))
 }
